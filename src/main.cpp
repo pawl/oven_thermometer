@@ -22,6 +22,11 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
+#define uS_TO_S_FACTOR 1000000LL
+
+int DEEPSLEEP_SECONDS = 120;
+int WAKE_TEMP = 150;
+
 int thermoDO = 19;  // SO
 int thermoCS = 23;
 int thermoCLK = 5;  // SCK
@@ -73,6 +78,14 @@ void setup() {
 }
 
 void loop() {
+  uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
+
+  // deep sleep if oven is off
+  if (filteredTemp < WAKE_TEMP) {
+    esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
+    esp_deep_sleep_start();
+  }
+
   display.clearDisplay();
 
   display.setTextSize(1);
@@ -83,7 +96,6 @@ void loop() {
   display.setTextSize(5);
   display.setTextColor(WHITE);
   display.setCursor(0, 20);
-  uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
   display.print(filteredTemp);
   display.println("F");
 
