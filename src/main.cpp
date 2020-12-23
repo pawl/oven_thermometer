@@ -119,8 +119,8 @@ void loop() {
   display.setTextColor(WHITE);
   display.setCursor(0, 1);
   display.print("On: ");
-  display.print((cycleCount * (CYCLE_TIME_MS / 1000)));
-  display.println("secs");
+  display.print((int) (cycleCount * (CYCLE_TIME_MS / 1000.0)));
+  display.println(" secs");
 
   display.setTextSize(5);
   display.setTextColor(WHITE);
