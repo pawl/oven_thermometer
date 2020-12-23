@@ -24,14 +24,26 @@
 
 #define uS_TO_S_FACTOR 1000000LL
 
+// amount of time to deep sleep between wake temp checks
 int DEEPSLEEP_SECONDS = 120;
+
+// temperature required to wake from deep sleep (oven on)
 int WAKE_TEMP = 150;
+
+// time between temp checks, MAX6675 recommends >250ms
+int CYCLE_TIME_MS = 250;
 
 int thermoDO = 19;  // SO
 int thermoCS = 23;
 int thermoCLK = 5;  // SCK
-int thermoVCC = 4;
+int thermoVCC = 4;  // is this required?
 // int thermoGND = 2;  // attached to GND
+
+// count of temperature checks after deep sleep (oven off)
+// TODO: use timestamp?
+int cycleCount = 0;
+
+bool isAlreadyAsleep = false;
 
 MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
 
@@ -68,6 +80,7 @@ void setup() {
   Serial.begin(9600);
 
   // display is using the 3.3v pin, so need to make another pin output 3.3v
+  // can't tell if this is actually required by the MAX6675 (it works without it)
   pinMode(thermoVCC, OUTPUT); digitalWrite(thermoVCC, HIGH);
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
@@ -82,6 +95,20 @@ void loop() {
 
   // deep sleep if oven is off
   if (filteredTemp < WAKE_TEMP) {
+    cycleCount = 0;
+
+    // display text when turning on and sleeping (oven off)
+    if (!isAlreadyAsleep) {
+      isAlreadyAsleep = true;
+
+      display.setTextSize(5);
+      display.setTextColor(WHITE);
+      display.setCursor(0, 20);
+      display.println("ZZZ");
+
+      display.display();
+    }
+
     esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
     esp_deep_sleep_start();
   }
@@ -91,7 +118,9 @@ void loop() {
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0, 1);
-  display.println("Thermometer");
+  display.print("On: ");
+  display.print((cycleCount * (CYCLE_TIME_MS / 1000)));
+  display.println("secs");
 
   display.setTextSize(5);
   display.setTextColor(WHITE);
@@ -101,5 +130,8 @@ void loop() {
 
   display.display();
 
-  delay(200);
+  cycleCount += 1;
+  isAlreadyAsleep = false;
+
+  delay(CYCLE_TIME_MS);
 }
