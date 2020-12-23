@@ -24,14 +24,17 @@
 
 #define uS_TO_S_FACTOR 1000000LL
 
-// amount of time to deep sleep between wake temp checks
-int DEEPSLEEP_SECONDS = 120;
-
 // temperature required to wake from deep sleep (oven on)
 int WAKE_TEMP = 150;
 
+// amount of time to deep sleep between wake (oven on) temp checks
+int DEEPSLEEP_SECONDS = 120;
+
 // time between temp checks, MAX6675 recommends >250ms
 int CYCLE_TIME_MS = 250;
+
+// number of cycles before trusting temp calculation
+int WARM_UP_CYCLES = 10;
 
 int thermoDO = 19;  // SO
 int thermoCS = 23;
@@ -90,23 +93,29 @@ void setup() {
   delay(2000);
 }
 
+void displaySleepMessage() {
+  display.clearDisplay();
+
+  display.setTextSize(5);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 20);
+  display.println("ZZZ");
+
+  display.display();
+}
+
 void loop() {
   uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
 
   // deep sleep if oven is off
-  if (filteredTemp < WAKE_TEMP) {
-    cycleCount = 0;
+  if ((cycleCount > WARM_UP_CYCLES) && (filteredTemp < WAKE_TEMP)) {
+    cycleCount = 0;  // reset
 
     // display text when turning on and sleeping (oven off)
     if (!isAlreadyAsleep) {
       isAlreadyAsleep = true;
 
-      display.setTextSize(5);
-      display.setTextColor(WHITE);
-      display.setCursor(0, 20);
-      display.println("ZZZ");
-
-      display.display();
+      displaySleepMessage();
     }
 
     esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
@@ -131,7 +140,7 @@ void loop() {
   display.display();
 
   cycleCount += 1;
-  isAlreadyAsleep = false;
+  isAlreadyAsleep = false;  // reset
 
   delay(CYCLE_TIME_MS);
 }
