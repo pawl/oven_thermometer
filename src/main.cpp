@@ -1,12 +1,11 @@
 /**
  * oven thermometer
  *
- * Turns on an LED on for one second,
- * then off for one second, repeatedly.
- * based on the lcdthermocouple example
- * also:
+ * based on:
+ * - max6675's lcdthermocouple example
  * - https://randomnerdtutorials.com/esp32-ssd1306-oled-display-arduino-ide/
  * - http://www.esp32learning.com/code/esp32-and-max6675-example.php
+ *
  * parts:
  * - HiLetgo DC 3-5V MAX6675 Module + K Type Thermocouple Temperature Sensor
  * - UCTRONICS 0.96 Inch OLED Module 12864 128x64 Yellow Blue SSD1306 Driver I2C
