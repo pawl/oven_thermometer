@@ -2,7 +2,7 @@
  * oven thermometer
  *
  * based on:
- * - max6675's lcdthermocouple example
+ * - https://github.com/adafruit/MAX6675-library/blob/1.1.0/examples/lcdthermocouple/lcdthermocouple.ino
  * - https://randomnerdtutorials.com/esp32-ssd1306-oled-display-arduino-ide/
  * - http://www.esp32learning.com/code/esp32-and-max6675-example.php
  *
@@ -111,6 +111,8 @@ void displaySleepMessage() {
 }
 
 void displayInfo(uint16_t filteredTemp, int cycleCount) {
+  display.clearDisplay();
+
   // show uptime
   display.setTextSize(1);
   display.setTextColor(WHITE);
@@ -132,6 +134,8 @@ void displayInfo(uint16_t filteredTemp, int cycleCount) {
   display.setCursor(0, 20);
   display.print(filteredTemp);
   display.println("F");
+
+  display.display();
 }
 
 void displayStartMessage() {
