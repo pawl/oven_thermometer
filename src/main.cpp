@@ -34,7 +34,7 @@ int DEEPSLEEP_SECONDS = 120;
 int CYCLE_TIME_MS = 250;
 
 // number of cycles before trusting temp calculation
-int WARM_UP_CYCLES = 1;
+int WARM_UP_CYCLES = 2;
 
 int thermoDO = 19;  // SO
 int thermoCS = 23;
