@@ -47,8 +47,6 @@ int thermoVCC = 4;  // is this required?
 // TODO: use timestamp?
 int cycleCount = 0;
 
-bool isAlreadyAsleep = false;
-
 // start with display on to indicate device is on
 bool isDisplayOn = true;
 
