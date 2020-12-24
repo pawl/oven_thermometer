@@ -104,26 +104,7 @@ void displaySleepMessage() {
   display.display();
 }
 
-void loop() {
-  uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
-
-  // deep sleep if oven is off
-  if ((cycleCount > WARM_UP_CYCLES) && (filteredTemp < WAKE_TEMP)) {
-    cycleCount = 0;  // reset
-
-    // display text when turning on and sleeping (oven off)
-    if (!isAlreadyAsleep) {
-      isAlreadyAsleep = true;
-
-      displaySleepMessage();
-    }
-
-    esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
-    esp_deep_sleep_start();
-  }
-
-  display.clearDisplay();
-
+void displayInfo(uint16_t filteredTemp, int cycleCount) {
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0, 1);
@@ -136,8 +117,44 @@ void loop() {
   display.setCursor(0, 20);
   display.print(filteredTemp);
   display.println("F");
+}
+
+void displayStartMessage() {
+  display.clearDisplay();
+
+  display.setTextSize(5);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 20);
+  display.println("...");
 
   display.display();
+}
+
+void loop() {
+  uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
+
+  // don't trust the temp reading until after a few cycles
+  if (cycleCount > WARM_UP_CYCLES) {
+    if (filteredTemp > WAKE_TEMP) {
+      // oven is on - show info
+      displayInfo(filteredTemp, cycleCount);
+    } else {
+      // oven is off - deep sleep
+      cycleCount = 0;  // reset
+
+      // display text before sleeping (to show sensor turned on)
+      if (!isAlreadyAsleep) {
+        isAlreadyAsleep = true;
+
+        displaySleepMessage();
+      }
+
+      esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
+      esp_deep_sleep_start();
+    }
+  } else {
+    displayStartMessage();
+  }
 
   cycleCount += 1;
   isAlreadyAsleep = false;  // reset
