@@ -18,6 +18,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "SimpleKalmanFilter.h"
+#include "uptime.h"
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -47,6 +48,9 @@ int thermoVCC = 4;  // is this required?
 int cycleCount = 0;
 
 bool isAlreadyAsleep = false;
+
+// start with display on to indicate device is on
+bool isDisplayOn = true;
 
 MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
 
@@ -96,22 +100,36 @@ void setup() {
 void displaySleepMessage() {
   display.clearDisplay();
 
-  display.setTextSize(5);
+  display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.println("ZZZ");
+  display.setCursor(0, 1);
+  display.print("Temp <");
+  display.println(WAKE_TEMP);
+  display.print("Sleeping...");
 
   display.display();
+
+  // give user time to read
+  delay(5000);
 }
 
 void displayInfo(uint16_t filteredTemp, int cycleCount) {
+  // show uptime
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0, 1);
   display.print("On: ");
-  display.print((int) (cycleCount * (CYCLE_TIME_MS / 1000.0)));
-  display.println(" secs");
+  uptime::calculateUptime();
+  unsigned long uptimeMinutes = uptime::getMinutes();
+  if (uptimeMinutes) {
+    display.print(uptimeMinutes);
+    display.println(" mins");
+  } else {
+    display.print(uptime::getSeconds());
+    display.println(" secs");
+  }
 
+  // show temperature
   display.setTextSize(5);
   display.setTextColor(WHITE);
   display.setCursor(0, 20);
@@ -122,12 +140,27 @@ void displayInfo(uint16_t filteredTemp, int cycleCount) {
 void displayStartMessage() {
   display.clearDisplay();
 
-  display.setTextSize(5);
+  display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.println("...");
+  display.setCursor(0, 1);
+  display.print("Starting...");
 
   display.display();
+}
+
+void ensureDisplayOn() {
+  if (!isDisplayOn) {
+    display.ssd1306_command(SSD1306_DISPLAYON);
+    isDisplayOn = true;
+  }
+}
+
+void ensureDisplayOff() {
+  if (isDisplayOn) {
+    // power efficient display sleep
+    display.ssd1306_command(SSD1306_DISPLAYOFF);
+    isDisplayOn = false;
+  }
 }
 
 void loop() {
@@ -137,27 +170,29 @@ void loop() {
   if (cycleCount > WARM_UP_CYCLES) {
     if (filteredTemp > WAKE_TEMP) {
       // oven is on - show info
+      ensureDisplayOn();
       displayInfo(filteredTemp, cycleCount);
     } else {
       // oven is off - deep sleep
       cycleCount = 0;  // reset
 
       // display text before sleeping (to show sensor turned on)
-      if (!isAlreadyAsleep) {
-        isAlreadyAsleep = true;
-
+      if (isDisplayOn) {
         displaySleepMessage();
       }
+
+      ensureDisplayOff();
 
       esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
       esp_deep_sleep_start();
     }
   } else {
-    displayStartMessage();
+    if (isDisplayOn) {
+      displayStartMessage();
+    }
   }
 
   cycleCount += 1;
-  isAlreadyAsleep = false;  // reset
 
   delay(CYCLE_TIME_MS);
 }
