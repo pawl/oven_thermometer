@@ -34,7 +34,7 @@ int DEEPSLEEP_SECONDS = 120;
 int CYCLE_TIME_MS = 250;
 
 // number of cycles before trusting temp calculation
-int WARM_UP_CYCLES = 10;
+int WARM_UP_CYCLES = 1;
 
 int thermoDO = 19;  // SO
 int thermoCS = 23;
@@ -80,6 +80,17 @@ float getFilteredTemperature(MAX6675 thermocouple, float* prevValue, SimpleKalma
   return filteredValue;
 }
 
+void displayStartMessage() {
+  display.clearDisplay();
+
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 1);
+  display.print("Starting");
+
+  display.display();
+}
+
 void setup() {
   Serial.begin(9600);
 
@@ -92,6 +103,8 @@ void setup() {
     for(;;);
   }
   delay(2000);
+
+  displayStartMessage();
 }
 
 void displaySleepMessage() {
@@ -110,41 +123,30 @@ void displaySleepMessage() {
   delay(5000);
 }
 
-void displayInfo(uint16_t filteredTemp, int cycleCount) {
+void displayInfo(uint16_t filteredTemp) {
   display.clearDisplay();
 
   // show uptime
-  display.setTextSize(1);
+  display.setTextSize(2);
   display.setTextColor(WHITE);
   display.setCursor(0, 1);
-  display.print("On: ");
+  display.print("On:");
   uptime::calculateUptime();
   unsigned long uptimeMinutes = uptime::getMinutes();
   if (uptimeMinutes) {
     display.print(uptimeMinutes);
-    display.println(" mins");
+    display.println(" min");
   } else {
     display.print(uptime::getSeconds());
-    display.println(" secs");
+    display.println(" sec");
   }
 
   // show temperature
   display.setTextSize(5);
   display.setTextColor(WHITE);
-  display.setCursor(0, 20);
+  display.setCursor(0, 22);
   display.print(filteredTemp);
   display.println("F");
-
-  display.display();
-}
-
-void displayStartMessage() {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 1);
-  display.print("Starting...");
 
   display.display();
 }
@@ -167,12 +169,15 @@ void ensureDisplayOff() {
 void loop() {
   uint16_t filteredTemp = getFilteredTemperature(thermocouple, &prevFilteredValue, &kalmanFilter);
 
+  cycleCount += 1;
+
   // don't trust the temp reading until after a few cycles
+  // TODO: this might be a problem caused by the kalman filter?
   if (cycleCount > WARM_UP_CYCLES) {
     if (filteredTemp > WAKE_TEMP) {
       // oven is on - show info
       ensureDisplayOn();
-      displayInfo(filteredTemp, cycleCount);
+      displayInfo(filteredTemp);
     } else {
       // oven is off - deep sleep
       cycleCount = 0;  // reset
@@ -187,13 +192,7 @@ void loop() {
       esp_sleep_enable_timer_wakeup(DEEPSLEEP_SECONDS * uS_TO_S_FACTOR);
       esp_deep_sleep_start();
     }
-  } else {
-    if (isDisplayOn) {
-      displayStartMessage();
-    }
   }
-
-  cycleCount += 1;
 
   delay(CYCLE_TIME_MS);
 }
