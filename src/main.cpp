@@ -47,7 +47,8 @@ int thermoVCC = 4;  // is this required?
 int cycleCount = 0;
 
 // start with display on to indicate device is on
-bool isDisplayOn = true;
+// use RTC_DATA_ATTR to make this variable survive deep sleep
+RTC_DATA_ATTR bool isDisplayOn = true;
 
 MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
 
